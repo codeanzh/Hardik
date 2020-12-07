@@ -1,0 +1,20 @@
+<html>
+    <head>
+        <title>Test Get Post</title>
+    </head>
+    <body>
+        <h1>Enter A Data To Save On Server.</h1>
+        <form action="/saveData" method="post">
+            <input type="text" name="data" placeholder="Enter Your data">
+            <br><br>
+            <input type="submit" name="submit" value="send">
+        </form>
+        <br><br>
+        <h2>
+            Press Show Button To See all Data.
+        </h2>
+        <form action="/showData" method="post">
+            <input type="submit" name="Show" value="Show">
+        </form>
+    </body>
+</html>
