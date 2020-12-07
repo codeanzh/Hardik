@@ -16,7 +16,7 @@ app.post("/saveData", function(req, res){
         data: req.body.data
     }
     datal = JSON.stringify(datal);
-    fs.writeFileSync('student.json', data);
+    fs.writeFileSync('student.json', datal);
 	res.redirect("saveData.html");
 });
 
