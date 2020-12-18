@@ -50,7 +50,7 @@ const ArduinoData = new mongoose.model("ArduinoData", arduinoDataSchema);
 
 const userSchema = new mongoose.Schema({
     name: String,
-    username: String,
+    email: String,
     password: String,
     arduino: arduinoDataSchema
 });
@@ -65,9 +65,8 @@ app.post("/setArduino", function(req, res){
         var error_num = 0;
         var error_arr = [];
 
-        for (var i = 0; i < req.body.data.length; i++)
-        {
-            ArduinoData.findOne({arduinoCode: req.body.data[i]}, function(err, arduinoDataFound){
+        req.body.data.forEach(function(item, index){
+            ArduinoData.findOne({arduinoCode: item}, function(err, arduinoDataFound){
                 if (err)
                 {
                     console.log(err);
@@ -76,12 +75,12 @@ app.post("/setArduino", function(req, res){
                 else if (arduinoDataFound)
                 {
                     prev_match++;
-                    prev_match_arr.push(req.body.data[i]);
+                    prev_match_arr.push(item);
                 }
                 else
                 {
                     arduinoData = new ArduinoData({
-                        arduinoCode: req.body.data[i],
+                        arduinoCode: item,
                         registered: false,
                         data: []
                     });
@@ -90,12 +89,12 @@ app.post("/setArduino", function(req, res){
                         if (err)
                         {
                             error_num++;
-                            error_arr[i] = req.body.data[i] + "   ===>>>   " + err + "\n";
+                            error_arr.push(item + "   ===>>>   " + err + "\n");
                         }
                     });
                 }
             });
-        }
+        });
 
         return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
 
@@ -240,9 +239,13 @@ app.post("/saveData", function(req, res){
     res.send("Data Saved!");
 });
 
-app.listen(process.env.PORT || 3000, function(){
+/*app.listen(process.env.PORT || 3000, function(){
     if (process.env.PORT === null || process.env.PORT === "")
         console.log("Server Started on Port 3000");
     else
         console.log("Server has Started on Port " + process.env.PORT);
+});*/
+
+app.listen(3000, function(){
+    console.log("Server has started on port 3000");
 });
