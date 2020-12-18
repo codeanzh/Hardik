@@ -16,7 +16,7 @@ app.use(session({
     saveUninitialized: false
 }));
 
-dbname = "ArduinoTest";
+dbname = "Arduino-Weather-Cast";
 url = process.env.DATA_BASE + dbname;
 mongoose.connect(url, {useNewUrlParser: true, useUnifiedTopology: true});
 mongoose.set("useCreateIndex", true);
@@ -57,7 +57,61 @@ const userSchema = new mongoose.Schema({
 
 const User = new mongoose.model("User", userSchema);
 
-app.post("/setArduino")
+app.post("/setArduino", function(req, res){
+    if (req.body.api_key === process.env.API_KEY)
+    {
+        var prev_match = 0;
+        var prev_match_arr = [];
+        var error_num = 0;
+        var error_arr = [];
+
+        for (var i = 0; i < req.body.data.length; i++)
+        {
+            ArduinoData.findOne({arduinoCode: req.body.data[i]}, function(err, arduinoDataFound){
+                if (err)
+                {
+                    console.log(err);
+                    res.send(err);
+                }
+                else if (arduinoDataFound)
+                {
+                    prev_match++;
+                    prev_match_arr.push(req.body.data[i]);
+                }
+                else
+                {
+                    arduinoData = new ArduinoData({
+                        arduinoCode: req.body.data[i],
+                        registered: false,
+                        data: []
+                    });
+
+                    arduinoData.save(function(err){
+                        if (err)
+                        {
+                            error_num++;
+                            error_arr[i] = req.body.data[i] + "   ===>>>   " + err + "\n";
+                        }
+                    });
+                }
+            });
+        }
+
+        return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
+
+        for (var i = 0; i < prev_match; i++)
+            return_data += prev_match_arr[i] + "\n";
+        
+        return_data += "Number of errors = " + error_num + "\n";
+
+        for (var i = 0; i < error_num; i++)
+            return_data += error_arr[i];
+
+        res.send(return_data);
+    }
+    else
+        res.send("Wrong API_KEY");
+});
 
 app.get("/", function(req, res){
     if (req.session.user)
@@ -186,7 +240,9 @@ app.post("/saveData", function(req, res){
     res.send("Data Saved!");
 });
 
-app.listen(3000, function(){
-    console.log("Server Started on Port 3000");
-    console.log(process.env.API_KEY);   
+app.listen(process.env.PORT || 3000, function(){
+    if (process.env.PORT === null || process.env.PORT === "")
+        console.log("Server Started on Port 3000");
+    else
+        console.log("Server has Started on Port " + process.env.PORT);
 });
