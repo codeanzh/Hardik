@@ -239,13 +239,6 @@ app.post("/saveData", function(req, res){
     res.send("Data Saved!");
 });
 
-/*app.listen(process.env.PORT || 3000, function(){
-    if (process.env.PORT === null || process.env.PORT === "")
-        console.log("Server Started on Port 3000");
-    else
-        console.log("Server has Started on Port " + process.env.PORT);
-});*/
-
-app.listen(3000, function(){
-    console.log("Server has started on port 3000");
+app.listen(process.env.PORT, function(){
+    console.log("Server has started on port " + process.env.PORT)
 });
