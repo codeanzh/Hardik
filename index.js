@@ -4,7 +4,6 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
-const async = require('async');
 
 const app = express();
 
@@ -44,7 +43,7 @@ const Data = new mongoose.model("Data", dataSchema);
 const arduinoDataSchema = new mongoose.Schema({
     arduinoCode: String,
     registered: Boolean,
-    data: [dataSchema]
+    data: [String]
 });
 
 const ArduinoData = new mongoose.model("ArduinoData", arduinoDataSchema);
@@ -53,12 +52,12 @@ const userSchema = new mongoose.Schema({
     name: String,
     email: String,
     password: String,
-    arduino: arduinoDataSchema
+    arduino: String
 });
 
 const User = new mongoose.model("User", userSchema);
 
-app.post("/setArduino", function(req, res){
+app.post("/saveArduino", function(req, res){
     if (req.body.api_key === process.env.API_KEY)
     {
         let prev_match = 0;
@@ -67,8 +66,6 @@ app.post("/setArduino", function(req, res){
         let error_arr = [];
 
         function check_done(index){
-            console.log(index);
-
             if (index == req.body.data.length - 1){
                 return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
 
@@ -158,6 +155,20 @@ app.get("/setArduino", function(req, res){
         return res.redirect("/login");
 });
 
+app.get("/main", function(req, res){
+    if (req.session.user)
+    {
+        if (req.session.user.arduino === null)
+            return res.redirect("/setArduino");
+        else
+            res.sendFile(__dirname + "/public/main.html");
+    }
+    else
+    {
+        return res.redirect("/login");
+    }
+});
+
 app.post("/signup", function(req, res){
 
     if (req.body.name === "" || req.body.name === null)
@@ -200,10 +211,10 @@ app.post("/signup", function(req, res){
                         arduino: null
                     });
 
-                    user.save(function(err){
-                        if(err)
+                    user.save(function(error){
+                        if(error)
                         {
-                            console.log(err);
+                            console.log(error);
                             return res.redirect("/signup");
                         }
                         else
@@ -219,7 +230,105 @@ app.post("/signup", function(req, res){
 });
 
 app.post("/login", function(req, res){
-    
+    if (req.session.user)
+        return res.redirect("/setArduino");
+    else
+    {
+        User.findOne({email: req.body.email}, function(err, userFound){
+            if (err)
+            {
+                console.log(err);
+                return res.redirect("/login");
+            }
+            else if (userFound)
+            {
+                bcrypt.compare(req.body.password, userFound.password, function(error, result){
+                    if (error)
+                    {
+                        console.log(error);
+                        return res.redirect("/login");
+                    }
+                    else if (result === true)
+                    {
+                        req.session.user = userFound;
+                        console.log("Signed in sucessfully");
+                        return res.redirect("/login");
+                    }
+                    else
+                    {
+                        console.log("Wrong Password");
+                        return res.redirect("/login");
+                    }
+                });
+            }
+            else
+            {
+                console.log("Wrong Username and Password");
+                return res.redirect("/login");
+            }
+        });
+    }
+});
+
+app.post("/setArduino", function(req, res){
+    if (req.session.user)
+    {
+        if (req.session.user.arduino === null)
+        {
+            ArduinoData.findOne({arduinoCode: req.body.arduinoCode}, function(err, arduinoCodeFound){
+                if (err)
+                {
+                    console.log(err);
+                    return res.redirect("/setArduino");
+                }
+                else if (arduinoCodeFound)
+                {
+                    if (arduinoCodeFound.registered)
+                    {
+                        console.log("Code already registered");
+                        return res.redirect("/setArduino");
+                    }
+                    else
+                    {
+                        User.updateOne({email: req.session.user.email}, {arduino: arduinoCodeFound._id}, function(error){
+                            if (error)
+                            {
+                                console.log(error);
+                                return res.redirect("/setArduino");
+                            }
+                            else
+                            {
+                                console.log("Succesfully Updated");
+                                req.session.user.arduino = arduinoCodeFound._id;
+                                ArduinoData.updateOne({_id: arduinoCodeFound._id}, {registered: true}, function(erro){
+                                    if (erro)
+                                    {
+                                        console.log("Error Occored while updating registered status of this Arduino " + arduinoCodeFound.arduinoCode);
+                                        console.log(erro);
+                                        return res.redirect("/setArduino");
+                                    }
+                                    else
+                                    {
+                                        console.log("Data Updated Sucessfully");
+                                        return res.redirect("/setArduino");
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+                else
+                {
+                    console.log("Wrong Arduino Code");
+                    return res.redirect("/setArduino");
+                }
+            });
+        }
+        else
+            return res.redirect("/setArduino");
+    }
+    else
+        return res.redirect("/login");
 });
 
 app.post("/saveData", function(req, res){
