@@ -25,7 +25,7 @@ mongoose.set("useCreateIndex", true);
 
 const dataSchema = new mongoose.Schema ({
     arduinoCode: String,
-    time: {type: Date, default: Date.now},
+    time: Date,
     temperature: Number,
     humidity: Number,
     presure: Number,
@@ -379,8 +379,17 @@ app.post("/setArduino", function(req, res){
 
 app.post("/saveData", function(req, res){
 
+    d = new Date();
+    localTime = d.getTime();
+    localOffset = d.getTimezoneOffset() * 60000;
+    utc = localTime + localOffset;
+    offset = 11;  
+    bombay = utc + (3600000*offset);
+    nd = new Date(bombay);
+
     const data = new Data({
         arduinoCode: req.body.arduinoCode,
+        time: nd.toLocaleString(),
         temperature: req.body.temperature,
         humidity: req.body.humidity,
         presure: req.body.presure,
