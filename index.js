@@ -7,6 +7,8 @@ const bcrypt = require('bcrypt');
 
 const app = express();
 
+app.set("view engine", "ejs");
+
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 
@@ -22,14 +24,8 @@ mongoose.connect(url, {useNewUrlParser: true, useUnifiedTopology: true});
 mongoose.set("useCreateIndex", true);
 
 const dataSchema = new mongoose.Schema ({
-    time: {
-        year: Number,
-        month: Number,
-        day: Number,
-        hour: Number,
-        minute: Number,
-        second: Number
-    },
+    arduinoCode: String,
+    time: {type: Date, default: Date.now},
     temperature: Number,
     humidity: Number,
     presure: Number,
@@ -43,7 +39,7 @@ const Data = new mongoose.model("Data", dataSchema);
 const arduinoDataSchema = new mongoose.Schema({
     arduinoCode: String,
     registered: Boolean,
-    data: [String]
+    dataPresent: Boolean
 });
 
 const ArduinoData = new mongoose.model("ArduinoData", arduinoDataSchema);
@@ -56,6 +52,94 @@ const userSchema = new mongoose.Schema({
 });
 
 const User = new mongoose.model("User", userSchema);
+
+app.get("/", function(req, res){
+    if (req.session.user)
+        return res.redirect("/setArduino");
+
+    console.log("User Entered Home");
+    res.sendFile(__dirname + "/public/home.html");
+});
+
+app.get("/signup", function(req, res){
+    if (req.session.user)
+        return res.redirect("/setArduino");
+        
+    console.log("New User Entered");
+    res.sendFile(__dirname + "/public/signup.html");
+});
+
+app.get("/login", function(req, res){
+    if (req.session.user)
+        return res.redirect("/setArduino");
+        
+    console.log("User Entered");
+    res.sendFile(__dirname + "/public/login.html");
+});
+
+app.get("/setArduino", function(req, res){
+    if (req.session.user)
+    {
+        if (req.session.user.arduino === null)
+            res.sendFile(__dirname + "/public/setArduino.html");
+        else
+            return res.redirect("/main");
+    }
+    else
+        return res.redirect("/login");
+});
+
+app.get("/main", function(req, res){
+    if (req.session.user)
+    {
+        if (req.session.user.arduino === null)
+            return res.redirect("/setArduino");
+        else
+            ArduinoData.findOne({_id: req.session.user.arduino}, function(err, arduinoDataFound){
+                if (err)
+                {
+                    console.log(err);
+                    res.send("<form action='/logout' method='post'><input type='submit' name='LOGOUT' value='LOGOUT'><br><br><br></form><p>UNKNOWN ERROR TRY AGAIN LATER<p>");
+                }
+                else if (arduinoDataFound)
+                {
+                    if (arduinoDataFound.dataPresent)
+                    {
+                        console.log("Main Page");
+                        res.redirect(__dirname + "/public/main", {start_date_time: "2020-10-16T00:00:00"});
+                    }
+                    else
+                    {
+                        console.log("No Data Has Been Sent From Arduino");
+                        res.send("<form action='/logout' method='post'><input type='submit' name='LOGOUT' value='LOGOUT'><br><br><br></form><p>No Data Has Been Sent From Arduino<p>");
+                    }
+                }
+                else
+                {
+                    console.log("Arduino Not Found");
+                    res.send("<form action='/logout' method='post'><input type='submit' name='LOGOUT' value='LOGOUT'><br><br><br></form><p>Arduino Not Found<p>");
+                }
+            });
+    }
+    else
+    {
+        return res.redirect("/login");
+    }
+});
+
+app.get("/showData", function(req, res){
+    if (req.session.user)
+    {
+        if (req.session.user.arduino === null)
+            return res.redirect("/saveArduino");
+        else
+        {
+
+        }
+    }
+    else
+        return res.redirect("/login");
+});
 
 app.post("/saveArduino", function(req, res){
     if (req.body.api_key === process.env.API_KEY)
@@ -100,7 +184,7 @@ app.post("/saveArduino", function(req, res){
                     arduinoData = new ArduinoData({
                         arduinoCode: item,
                         registered: false,
-                        data: []
+                        dataPresent: false
                     });
 
                     arduinoData.save(function(err){
@@ -117,56 +201,6 @@ app.post("/saveArduino", function(req, res){
     }
     else
         res.send("Wrong API_KEY");
-});
-
-app.get("/", function(req, res){
-    if (req.session.user)
-        return res.redirect("/setArduino");
-
-    console.log("User Entered Home");
-    res.sendFile(__dirname + "/public/home.html");
-});
-
-app.get("/signup", function(req, res){
-    if (req.session.user)
-        return res.redirect("/setArduino");
-        
-    console.log("New User Entered");
-    res.sendFile(__dirname + "/public/signup.html");
-});
-
-app.get("/login", function(req, res){
-    if (req.session.user)
-        return res.redirect("/setArduino");
-        
-    console.log("User Entered");
-    res.sendFile(__dirname + "/public/login.html");
-});
-
-app.get("/setArduino", function(req, res){
-    if (req.session.user)
-    {
-        if (req.session.user.arduino === null)
-            res.sendFile(__dirname + "/public/setArduino.html");
-        else
-            return res.redirect("/main");
-    }
-    else
-        return res.redirect("/login");
-});
-
-app.get("/main", function(req, res){
-    if (req.session.user)
-    {
-        if (req.session.user.arduino === null)
-            return res.redirect("/setArduino");
-        else
-            res.sendFile(__dirname + "/public/main.html");
-    }
-    else
-    {
-        return res.redirect("/login");
-    }
 });
 
 app.post("/signup", function(req, res){
@@ -251,7 +285,7 @@ app.post("/login", function(req, res){
                     else if (result === true)
                     {
                         req.session.user = userFound;
-                        console.log("Signed in sucessfully");
+                        console.log("Signed in successfuly");
                         return res.redirect("/login");
                     }
                     else
@@ -268,6 +302,18 @@ app.post("/login", function(req, res){
             }
         });
     }
+});
+
+app.post("/logout", function(req, res){
+    if (req.session.user)
+    {
+        req.session.destroy(function(){
+            console.log("Logout Successfuly");
+            return res.redirect("/login");
+        });
+    }
+    else
+        return res.redirect("/login");
 });
 
 app.post("/setArduino", function(req, res){
@@ -298,9 +344,9 @@ app.post("/setArduino", function(req, res){
                             }
                             else
                             {
-                                console.log("Succesfully Updated");
+                                console.log("Succesfuly Updated");
                                 req.session.user.arduino = arduinoCodeFound._id;
-                                ArduinoData.updateOne({_id: arduinoCodeFound._id}, {registered: true}, function(erro){
+                                ArduinoData.updateOne({_id: arduinoCodeFound._id}, {registered: true}, {dataPresent: false}, function(erro){
                                     if (erro)
                                     {
                                         console.log("Error Occored while updating registered status of this Arduino " + arduinoCodeFound.arduinoCode);
@@ -309,7 +355,7 @@ app.post("/setArduino", function(req, res){
                                     }
                                     else
                                     {
-                                        console.log("Data Updated Sucessfully");
+                                        console.log("Data Updated Successfuly");
                                         return res.redirect("/setArduino");
                                     }
                                 });
@@ -333,16 +379,8 @@ app.post("/setArduino", function(req, res){
 
 app.post("/saveData", function(req, res){
 
-    const arduinoData = new ArduinoData({
+    const data = new Data({
         arduinoCode: req.body.arduinoCode,
-        time: {
-            year: req.body.time.year,
-            month: req.body.time.month,
-            day: req.body.time.day,
-            hour: req.body.time.hour,
-            minute: req.body.time.minute,
-            second: req.body.time.second
-        },
         temperature: req.body.temperature,
         humidity: req.body.humidity,
         presure: req.body.presure,
@@ -351,11 +389,42 @@ app.post("/saveData", function(req, res){
         rain: req.body.rain
     });
 
-    arduinoData.save();
-
-    console.log("Data Saved!");
-
-    res.send("Data Saved!");
+    ArduinoData.findOne({arduinoCode: req.body.arduinoCode}, function(error, arduinoDataFound){
+        if (error)
+        {
+            console.log(error);
+            res.send("Error");
+        }
+        else if (arduinoDataFound)
+        {
+            if (arduinoDataFound.registered)
+            {
+                ArduinoData.updateOne({arduinoCode: req.body.arduinoCode}, {dataPresent: true}, function(error){
+                    if (error)
+                    {
+                        console.log(error);
+                        res.send("Error");
+                    }
+                    else 
+                    {
+                        console.log("Data Added Successfully");
+                        data.save();
+                        res.send("Success");
+                    }
+                });
+            }
+            else
+            {
+                console.log("Arduino Not Registered");
+                res.send("Error");
+            }
+        }
+        else
+        {
+            console.log("No Data Found For Arduino Code === " + req.body.arduinoCode);
+            res.send("Error");
+        }
+    });
 });
 
 app.listen(process.env.PORT, function(){

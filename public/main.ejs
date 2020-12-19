@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>MAIN</title>
+</head>
+<body>
+	<form action="/logout" method="post">
+		<input type="submit" name="LOGOUT" value="LOGOUT">
+		<br><br><br>
+	</form>
+	<form action="/showData" method="get">
+		<input type="datetime-local" id="start-date-time" min="<%= start_date_time%>" name="start-date-time">
+		<input type="submit" name="submit">
+	</form>
+<script type="text/javascript">
+console.log("BOOM");
+</script>
+</body>
+</html>
