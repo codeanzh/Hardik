@@ -106,7 +106,7 @@ app.get("/main", function(req, res){
                     if (arduinoDataFound.dataPresent)
                     {
                         console.log("Main Page");
-                        res.redirect(__dirname + "/public/main", {start_date_time: "2020-10-16T00:00:00"});
+                        res.render(__dirname + "/public/main", {start_date_time: "2020-10-16T00:00:00"});
                     }
                     else
                     {
