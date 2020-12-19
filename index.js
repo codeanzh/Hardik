@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
+const async = require('async');
 
 const app = express();
 
@@ -41,7 +42,7 @@ const dataSchema = new mongoose.Schema ({
 const Data = new mongoose.model("Data", dataSchema);
 
 const arduinoDataSchema = new mongoose.Schema({
-    arduinoCode: Number,
+    arduinoCode: String,
     registered: Boolean,
     data: [dataSchema]
 });
@@ -60,10 +61,28 @@ const User = new mongoose.model("User", userSchema);
 app.post("/setArduino", function(req, res){
     if (req.body.api_key === process.env.API_KEY)
     {
-        var prev_match = 0;
-        var prev_match_arr = [];
-        var error_num = 0;
-        var error_arr = [];
+        let prev_match = 0;
+        let prev_match_arr = [];
+        let error_num = 0;
+        let error_arr = [];
+
+        function check_done(index){
+            console.log(index);
+
+            if (index == req.body.data.length - 1){
+                return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
+
+                for (var i = 0; i < prev_match; i++)
+                    return_data += prev_match_arr[i] + "\n";
+                
+                return_data += "Number of errors = " + error_num + "\n";
+    
+                for (var i = 0; i < error_num; i++)
+                    return_data += error_arr[i];
+    
+                res.send(return_data);
+            }
+        }
 
         req.body.data.forEach(function(item, index){
             ArduinoData.findOne({arduinoCode: item}, function(err, arduinoDataFound){
@@ -71,11 +90,13 @@ app.post("/setArduino", function(req, res){
                 {
                     console.log(err);
                     res.send(err);
+                    check_done(index);
                 }
                 else if (arduinoDataFound)
                 {
-                    prev_match++;
+                    prev_match += 1;
                     prev_match_arr.push(item);
+                    check_done(index);
                 }
                 else
                 {
@@ -88,25 +109,14 @@ app.post("/setArduino", function(req, res){
                     arduinoData.save(function(err){
                         if (err)
                         {
-                            error_num++;
+                            error_num += 1;
                             error_arr.push(item + "   ===>>>   " + err + "\n");
                         }
                     });
+                    check_done(index);
                 }
             });
         });
-
-        return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
-
-        for (var i = 0; i < prev_match; i++)
-            return_data += prev_match_arr[i] + "\n";
-        
-        return_data += "Number of errors = " + error_num + "\n";
-
-        for (var i = 0; i < error_num; i++)
-            return_data += error_arr[i];
-
-        res.send(return_data);
     }
     else
         res.send("Wrong API_KEY");
