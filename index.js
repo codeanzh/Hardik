@@ -383,7 +383,7 @@ app.post("/saveData", function(req, res){
     localTime = d.getTime();
     localOffset = d.getTimezoneOffset() * 60000;
     utc = localTime + localOffset;
-    offset = 11;  
+    offset = 5.5;
     bombay = utc + (3600000*offset);
     nd = new Date(bombay);
 
