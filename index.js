@@ -105,10 +105,21 @@ app.get("/main", function(req, res){
                 }
                 else if (arduinoDataFound)
                 {
+                    req.session.arduinoCode = arduinoDataFound.arduinoCode;
+
                     if (arduinoDataFound.dataPresent)
                     {
                         console.log("Main Page");
-                        res.render(__dirname + "/public/main", {start_date_time: "2020-10-16T00:00:00"});
+                        req.session.arduinoData = arduinoDataFound;
+                        if (req.session.result)
+                        {
+                            result = req.session.result;
+                            req.session.result = null;
+                            console.log("Data Sent");
+                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(req.session.arduinoData.minTime).slice(1,17), end_date_time: JSON.stringify(req.session.arduinoData.maxTime).slice(1,17), data: true, dataResult: result});
+                        }
+                        else
+                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(arduinoDataFound.minTime).slice(1,17), end_date_time: JSON.stringify(arduinoDataFound.maxTime).slice(1,17), data: false, dataResult: null});
                     }
                     else
                     {
@@ -127,14 +138,45 @@ app.get("/main", function(req, res){
         return res.redirect("/login");
 });
 
-app.get("/showData", function(req, res){
+app.post("/showData", function(req, res){
     if (req.session.user)
     {
         if (req.session.user.arduino === null)
             return res.redirect("/saveArduino");
+        else if (req.session.arduinoCode)
+        {
+            if (req.body.start_date_time === "" || req.body.start_date_time === null || req.body.end_date_time === "" || req.body.end_date_time === null)
+            {
+                console.log("No Data Eneterd");
+                return res.redirect("/main");
+            }
+            else
+            {
+                Data.find({arduinoCode: req.session.arduinoCode, time: {$gt: req.body.start_date_time + ":00.000+00:00", $lt: req.body.end_date_time + ":59.999+00:00"}}).exec(function(err, result){
+                    if (err)
+                    {
+                        console.log(err);
+                        return res.redirect("/main");
+                    }
+                    else if (result)
+                    {
+                        console.log("Result Came");
+                        req.session.result = result;
+                        console.log(result);
+                        return res.redirect("/main");
+                    }
+                    else
+                    {
+                        console.log("No Results Found");
+                        return res.redirect("/main");
+                    }
+                });
+            }
+        }
         else
         {
-
+            console.log("Data Shown Withough setting up the session");
+            return res.redirect("/main");
         }
     }
     else
