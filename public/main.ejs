@@ -4,6 +4,11 @@
 	<meta charset="utf-8">
 	<title>MAIN</title>
 </head>
+<style type="text/css">
+	table{
+		border: 1px solid black;
+	}
+</style>
 <body>
 	<form action="/logout" method="post">
 		<input type="submit" name="LOGOUT" value="LOGOUT">
@@ -17,19 +22,42 @@
 		<input type="datetime-local" id="end-date-time" min="<%= start_date_time%>" max="<%= end_date_time%>" name="end_date_time">
 		<br><br>
 		<input type="submit" name="submit">
-	</form>
-	<p id="arduino"></p>
-	<div id="data"></div>
+	</form><br><br>
+	<%if (length >= 1){%>
+		<p id="arduinoCode">Arduino Code : <%= dataResult[0].arduinoCode%></p><br><br>
+	<%}%>
+	<%if (data === true){%>
+		<table id="data" class="data" border="1px">
+			<tr>
+				<th>Time</th>
+				<th>Temperature</th>
+				<th>Humidity</th>
+				<th>Presure</th>
+				<th>Wind Speed</th>
+				<th>Direction</th>
+				<th>Rain</th>
+			</tr>
+			<%for (var i = 0; i < length; i++){%>
+				<tr>
+					<td><%= dataResult[i].time%></td>
+					<td><%= dataResult[i].temperature%></td>
+					<td><%= dataResult[i].humidity%></td>
+					<td><%= dataResult[i].presure%></td>
+					<td><%= dataResult[i].windSpeed%></td>
+					<td><%= dataResult[i].direction%></td>
+					<td><%= dataResult[i].rain%></td>
+				</tr>
+			<%}%>
+		</table>
+	<%}%>
 <script type="text/javascript">
 	function dateTime()
 	{
 		document.getElementById('end-date-time').setAttribute('min', document.getElementById('start-date-time').value);
 	}
 
-	if (<%= data%> === true)
-	{
-		console.log("<%= dataResult%>");
-	}
+	if (<%= data%>)
+		console.log(<%= length%>);
 </script>
 </body>
 </html>

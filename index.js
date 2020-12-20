@@ -116,10 +116,10 @@ app.get("/main", function(req, res){
                             result = req.session.result;
                             req.session.result = null;
                             console.log("Data Sent");
-                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(req.session.arduinoData.minTime).slice(1,17), end_date_time: JSON.stringify(req.session.arduinoData.maxTime).slice(1,17), data: true, dataResult: result});
+                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(req.session.arduinoData.minTime).slice(1,17), end_date_time: JSON.stringify(req.session.arduinoData.maxTime).slice(1,17), data: true, dataResult: result, length: result.length});
                         }
                         else
-                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(arduinoDataFound.minTime).slice(1,17), end_date_time: JSON.stringify(arduinoDataFound.maxTime).slice(1,17), data: false, dataResult: null});
+                            res.render(__dirname + "/public/main", {start_date_time: JSON.stringify(arduinoDataFound.minTime).slice(1,17), end_date_time: JSON.stringify(arduinoDataFound.maxTime).slice(1,17), data: false, dataResult: null, length: 0});
                     }
                     else
                     {
@@ -175,7 +175,7 @@ app.post("/showData", function(req, res){
         }
         else
         {
-            console.log("Data Shown Withough setting up the session");
+            console.log("Data Tried to Shown Withough setting up the session");
             return res.redirect("/main");
         }
     }
@@ -190,9 +190,13 @@ app.post("/saveArduino", function(req, res){
         let prev_match_arr = [];
         let error_num = 0;
         let error_arr = [];
+        let x = 0;
 
-        function check_done(index){
-            if (index == req.body.data.length - 1){
+        function check_done(){
+
+            x += 1;
+
+            if (x === req.body.data.length){
                 return_data = "Done\nNumber of Previus match = " + prev_match + "\n";
 
                 for (var i = 0; i < prev_match; i++)
@@ -231,14 +235,14 @@ app.post("/saveArduino", function(req, res){
                         maxTime: null
                     });
 
-                    arduinoData.save(function(err){
-                        if (err)
+                    arduinoData.save(function(error){
+                        if (error)
                         {
                             error_num += 1;
                             error_arr.push(item + "   ===>>>   " + err + "\n");
                         }
+                        check_done();
                     });
-                    check_done(index);
                 }
             });
         });
@@ -390,7 +394,7 @@ app.post("/setArduino", function(req, res){
                             {
                                 console.log("Succesfuly Updated");
                                 req.session.user.arduino = arduinoCodeFound._id;
-                                ArduinoData.updateOne({_id: arduinoCodeFound._id}, {registered: true}, {dataPresent: false}, function(erro){
+                                ArduinoData.updateOne({_id: arduinoCodeFound._id}, {registered: true, dataPresent: false, minTime: null, maxTime: null}, function(erro){
                                     if (erro)
                                     {
                                         console.log("Error Occored while updating registered status of this Arduino " + arduinoCodeFound.arduinoCode);
@@ -497,11 +501,6 @@ app.post("/saveData", function(req, res){
             res.send("Error");
         }
     });
-});
-
-app.post("/test", function(req, res){
-    console.log(Data.find({arduinoCode: 12345}).sort({ "time": -1}).limit(1).schema.paths.time.options.type());
-    res.send("Send");
 });
 
 app.listen(process.env.PORT, function(){
