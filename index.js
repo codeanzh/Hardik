@@ -39,7 +39,9 @@ const Data = new mongoose.model("Data", dataSchema);
 const arduinoDataSchema = new mongoose.Schema({
     arduinoCode: String,
     registered: Boolean,
-    dataPresent: Boolean
+    dataPresent: Boolean,
+    minTime: Date,
+    maxTime: Date
 });
 
 const ArduinoData = new mongoose.model("ArduinoData", arduinoDataSchema);
@@ -122,9 +124,7 @@ app.get("/main", function(req, res){
             });
     }
     else
-    {
         return res.redirect("/login");
-    }
 });
 
 app.get("/showData", function(req, res){
@@ -184,7 +184,9 @@ app.post("/saveArduino", function(req, res){
                     arduinoData = new ArduinoData({
                         arduinoCode: item,
                         registered: false,
-                        dataPresent: false
+                        dataPresent: false,
+                        minTime: null,
+                        maxTime: null
                     });
 
                     arduinoData.save(function(err){
@@ -408,19 +410,38 @@ app.post("/saveData", function(req, res){
         {
             if (arduinoDataFound.registered)
             {
-                ArduinoData.updateOne({arduinoCode: req.body.arduinoCode}, {dataPresent: true}, function(error){
-                    if (error)
-                    {
-                        console.log(error);
-                        res.send("Error");
-                    }
-                    else 
-                    {
-                        console.log("Data Added Successfully");
-                        data.save();
-                        res.send("Success");
-                    }
-                });
+                if (arduinoDataFound.dataPresent)
+                {
+                    ArduinoData.updateOne({arduinoCode: req.body.arduinoCode, maxTime: nd.toLocaleString()}, function(error){
+                        if (error)
+                        {
+                            console.log(error);
+                            res.send("Error");
+                        }
+                        else 
+                        {
+                            console.log("Data Added Successfully");
+                            data.save();
+                            res.send("Success");
+                        }
+                    });
+                }
+                else
+                {
+                    ArduinoData.updateOne({arduinoCode: req.body.arduinoCode, dataPresent: true, minTime: nd.toLocaleString(), maxTime: nd.toLocaleString()}, function(error){
+                        if (error)
+                        {
+                            console.log(error);
+                            res.send("Error");
+                        }
+                        else 
+                        {
+                            console.log("Data Added Successfully");
+                            data.save();
+                            res.send("Success");
+                        }
+                    });
+                }
             }
             else
             {
@@ -434,6 +455,11 @@ app.post("/saveData", function(req, res){
             res.send("Error");
         }
     });
+});
+
+app.post("/test", function(req, res){
+    console.log(Data.find({arduinoCode: 12345}).sort({ "time": -1}).limit(1).schema.paths.time.options.type());
+    res.send("Send");
 });
 
 app.listen(process.env.PORT, function(){
